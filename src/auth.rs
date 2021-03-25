@@ -1,28 +1,37 @@
 use dotenv::dotenv;
 use reqwest::{header::AUTHORIZATION, Client};
+use rocket::http::{uri, ContentType, Cookie, CookieJar, Status};
+use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, FromRequest, Request};
-use rocket::response::{self, Response, Responder, Flash, Redirect};
-use rocket::{
-    http::{uri, Cookie, CookieJar, ContentType, Status},
-    outcome::IntoOutcome,
-};
+use rocket::response::{self, Flash, Redirect, Responder, Response};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use std::{backtrace::Backtrace, io::Cursor};
 use std::{env, str};
-use std::io::Cursor;
 use thiserror::Error;
 
 pub const AUTH_BASE: &str = "https://osu.ppy.sh/oauth/authorize";
+pub const TOKEN_URL: &str = "https://osu.ppy.sh/oauth/token";
 pub const API_BASE: &str = "https://osu.ppy.sh/api/v2";
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("request error: {0}")]
-    RequestError(#[from] reqwest::Error),
+    #[error("request error: {source}, {backtrace}")]
+    RequestError {
+        #[from]
+        source: reqwest::Error,
+        backtrace: Backtrace,
+    },
     #[error("oppai error")]
     OppaiError(#[from] oppai_rs::Error),
+    #[error("json error: {source}, {backtrace}")]
+    JsonError {
+        #[from]
+        source: serde_json::Error,
+        backtrace: Backtrace,
+    },
 }
 
 #[rocket::async_trait]
@@ -43,20 +52,6 @@ struct TokenResponse {
     access_token: String,
     refresh_token: String,
 }
-#[derive(Debug)]
-struct Auth {
-    client_id: String,
-    client_secret: String,
-    redirect_uri: String,
-    response_type: String,
-    scope: String,
-    state: String,
-    grant_type: String,
-    auth_url: String,
-    api_url: String,
-    token_url: String,
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 struct User {
     username: String,
@@ -77,67 +72,50 @@ impl<'r> FromRequest<'r> for OAuthToken {
     }
 }
 
-impl Auth {
-    fn new() -> Self {
-        Auth {
-            client_id: env::var("CLIENT_ID").expect("error"),
-            client_secret: env::var("CLIENT_SECRET").expect("error"),
-            redirect_uri: env::var("CALLBACK_URI").expect("error"),
-            response_type: "code".into(),
-            scope: "public identify".into(),
-            state: "owo".into(),
-            grant_type: "authorization_code".into(),
-            auth_url: AUTH_BASE.into(),
-            api_url: API_BASE.into(),
-            token_url: "https://osu.ppy.sh/oauth/token".into(),
-        }
-    }
+async fn token_request(auth_code: &str) -> Result<TokenResponse> {
+    let client_id = env::var("CLIENT_ID").expect("error");
+    let client_secret = env::var("CLIENT_SECRET").expect("error");
+    let redirect_uri = env::var("CALLBACK_URI").expect("error");
+    println!(
+        "id: {:?}, secret: {:?}, uri: {:?}",
+        client_id, client_secret, redirect_uri
+    );
+    let params = json!({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": auth_code,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri
+    });
+    let res = Client::new()
+        .post(TOKEN_URL)
+        .header("content-type", "application/json")
+        .json(&params)
+        .send()
+        .await?;
 
-    async fn token_request(&self, auth_code: &str) -> Result<TokenResponse> {
-        let params = [
-            ("client_id", self.client_id.to_owned()),
-            ("client_secret", self.client_secret.to_owned()),
-            ("code", auth_code.into()),
-            ("grant_type", self.grant_type.to_owned()),
-            ("redirect_uri", self.redirect_uri.to_owned()),
-        ];
-        let res = Client::new()
-            .post(self.token_url.to_owned())
-            .form(&params)
-            .send()
-            .await?
-            .json::<TokenResponse>()
-            .await?;
-
-        Ok(res)
-    }
-
-    async fn get_me(&self, token: &str) -> Result<User> {
-        let res = Client::new()
-            .get(format!("{}{}", self.api_url, "/me/osu"))
-            .header(AUTHORIZATION, format!("Bearer {}", token))
-            .send()
-            .await?
-            .json::<User>()
-            .await?;
-        Ok(res)
-    }
+    let bytes = res.bytes().await?;
+    println!("{:?}", bytes);
+    let res = serde_json::from_slice::<TokenResponse>(bytes.as_ref())?;
+    Ok(res)
 }
 
-#[get("/callback?<code>&<state>")]
-pub async fn auth_callback(
-    code: String,
-    state: Option<String>,
-    cookies: &CookieJar<'_>,
-) -> Result<Redirect> {
-    let auth = Auth::new();
-    let tr = auth.token_request(&code).await?;
-    let user = auth.get_me(&tr.access_token).await?;
+async fn get_me(token: &str) -> Result<User> {
+    let res = Client::new()
+        .get(format!("{}{}", API_BASE, "/me/osu"))
+        .header(AUTHORIZATION, format!("Bearer {}", token))
+        .send()
+        .await?
+        .json::<User>()
+        .await?;
+    Ok(res)
+}
+
+#[get("/callback?<code>")]
+pub async fn auth_callback(code: String, cookies: &CookieJar<'_>) -> Result<Redirect> {
+    let tr = token_request(&code).await?;
+    let user = get_me(&tr.access_token).await?;
     println!("Logged in as {:?}", user.username);
     cookies.add_private(Cookie::new("user_token", tr.access_token));
-    Ok(Redirect::to("/index"))
+    Ok(Redirect::to("/"))
 }
-
-// fn get_login_info() -> UserState {
-
-// }

@@ -5,7 +5,7 @@ import "antd/dist/antd.css"
 
 const { Option } = Select
 
-const modpool = ["NM", "HD", "HR", "DT", "FM", "EZ", "HT", "TB"]
+const modpool = ["NM", "HD", "HR", "DT", "FM", "EZ", "HT", "FL", "TB"]
 
 const columns = [
   { title: "Mod", dataIndex: "mod", key: "mod" },
@@ -73,7 +73,7 @@ class Mappool extends React.Component<IProps, IState> {
         modFlag = 0
       }
     }
-    fetch(`/map_info/${mapId}?mods=${modFlag}`)
+    fetch(`/api/map_info/${mapId}?mods=${modFlag}`)
       .then((response) => response.json())
       .then((response) => {
         let map = {
@@ -130,6 +130,11 @@ class Mappool extends React.Component<IProps, IState> {
           <Form.Item>
             <Button type="primary" onClick={this.onAdd}>
               Add
+            </Button>
+          </Form.Item>
+          <Form.Item>
+            <Button type="link" href="/api/login">
+              Login
             </Button>
           </Form.Item>
         </Form>

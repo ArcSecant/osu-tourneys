@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::offset::Utc;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Session {

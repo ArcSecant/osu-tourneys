@@ -2,7 +2,6 @@
   "name": "tourney-hub",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:8000",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
@@ -12,6 +11,7 @@
     "@types/react": "^17.0.3",
     "@types/react-dom": "^17.0.3",
     "antd": "^4.14.1",
+    "http-proxy-middleware": "^0.19.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",

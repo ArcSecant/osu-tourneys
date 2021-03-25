@@ -79,10 +79,10 @@ pub async fn map_info(
             res.bpm *= 1.5;
         }
         if mods == Mods::HR {
-            res.ar = 10.0_f32.min(res.ar*1.4);
-            res.cs = 10.0_f32.min(res.cs*1.3);
-            res.accuracy = 10.0_f32.min(res.accuracy*1.4);
-            res.drain = 10.0_f32.min(res.drain*1.4);
+            res.ar = 10.0_f32.min(res.ar * 1.4);
+            res.cs = 10.0_f32.min(res.cs * 1.3);
+            res.accuracy = 10.0_f32.min(res.accuracy * 1.4);
+            res.drain = 10.0_f32.min(res.drain * 1.4);
         }
         if mods == Mods::EZ {
             res.ar /= 2.0;
