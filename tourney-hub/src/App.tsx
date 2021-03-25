@@ -1,11 +1,9 @@
-import React from 'react';
+import React, { useState } from "react"
 
 import { Mappool } from "./Mappool"
 
 function App() {
-  return (
-    <Mappool />
-  );
+  return <Mappool maps={[]} />
 }
 
-export default App;
+export default App

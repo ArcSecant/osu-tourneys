@@ -18,7 +18,6 @@ use rocket::response::{Flash, Redirect};
 
 #[get("/login")]
 fn login() -> Redirect {
-    dotenv::dotenv().expect("Failed to read .env file");
     let auth_url: String = format!(
         "?client_id={}&redirect_uri={}&response_type=code&scope=public+identify",
         "2970", "http://localhost:3000/api/callback"
@@ -28,12 +27,13 @@ fn login() -> Redirect {
 
 #[get("/logout")]
 fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
-    cookies.remove_private(Cookie::named("user_id"));
+    cookies.remove_private(Cookie::named("user_token"));
     Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 
 #[launch]
 fn rocket() -> rocket::Rocket {
+    dotenv::dotenv().expect("Failed to read .env file");
     let mut conf = Config::DEBUG_PROFILE;
     rocket::ignite().mount(
         "/",
