@@ -9,12 +9,23 @@ extern crate dotenv;
 extern crate reqwest;
 extern crate serde;
 mod auth;
+mod db;
+mod error;
 mod osuapi;
 mod session;
 
+use crate::error::Error;
 use rocket::config::Config;
 use rocket::http::{Cookie, CookieJar};
 use rocket::response::{Flash, Redirect};
+use std::env;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio_postgres::{Client, NoTls};
+
+static AUTH_BASE: &str = "https://osu.ppy.sh/oauth/authorize";
+static TOKEN_URL: &str = "https://osu.ppy.sh/oauth/token";
+static API_BASE: &str = "https://osu.ppy.sh/api/v2";
 
 #[get("/login")]
 fn login() -> Redirect {
@@ -22,7 +33,7 @@ fn login() -> Redirect {
         "?client_id={}&redirect_uri={}&response_type=code&scope=public+identify",
         "2970", "http://localhost:3000/api/callback"
     );
-    Redirect::to(format!("{}{}", auth::AUTH_BASE, auth_url))
+    Redirect::to(format!("{}{}", AUTH_BASE, auth_url))
 }
 
 #[get("/logout")]
@@ -31,12 +42,33 @@ fn logout(cookies: &CookieJar<'_>) -> Flash<Redirect> {
     Flash::success(Redirect::to("/"), "Successfully logged out.")
 }
 
-#[launch]
-fn rocket() -> rocket::Rocket {
+#[rocket::main]
+async fn main() -> Result<(), Error> {
     dotenv::dotenv().expect("Failed to read .env file");
+    let conn_str = format!(
+        "host=localhost user=postgres password={}",
+        env::var("DB_PASS").expect("error")
+    );
+    let (client, connection) = tokio_postgres::connect(&conn_str, NoTls).await?;
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
     let mut conf = Config::DEBUG_PROFILE;
-    rocket::ignite().mount(
-        "/",
-        routes![login, logout, auth::auth_callback, osuapi::map_info],
-    )
+    rocket::ignite()
+        .manage(Arc::new(Mutex::new(client)))
+        .mount(
+            "/",
+            routes![
+                login,
+                logout,
+                auth::auth_callback,
+                osuapi::map_info,
+                db::save_user
+            ],
+        )
+        .launch()
+        .await?;
+    Ok(())
 }

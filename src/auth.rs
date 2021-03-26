@@ -1,4 +1,5 @@
-use dotenv::dotenv;
+use crate::error::{Error, Result};
+use crate::{API_BASE, TOKEN_URL};
 use reqwest::{header::AUTHORIZATION, Client};
 use rocket::http::{uri, ContentType, Cookie, CookieJar, Status};
 use rocket::outcome::IntoOutcome;
@@ -6,33 +7,8 @@ use rocket::request::{self, FlashMessage, FromRequest, Request};
 use rocket::response::{self, Flash, Redirect, Responder, Response};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-use std::{backtrace::Backtrace, io::Cursor};
+use std::io::Cursor;
 use std::{env, str};
-use thiserror::Error;
-
-pub const AUTH_BASE: &str = "https://osu.ppy.sh/oauth/authorize";
-pub const TOKEN_URL: &str = "https://osu.ppy.sh/oauth/token";
-pub const API_BASE: &str = "https://osu.ppy.sh/api/v2";
-
-pub type Result<T, E = Error> = std::result::Result<T, E>;
-
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("request error: {source}, {backtrace}")]
-    RequestError {
-        #[from]
-        source: reqwest::Error,
-        backtrace: Backtrace,
-    },
-    #[error("oppai error")]
-    OppaiError(#[from] oppai_rs::Error),
-    #[error("json error: {source}, {backtrace}")]
-    JsonError {
-        #[from]
-        source: serde_json::Error,
-        backtrace: Backtrace,
-    },
-}
 
 #[rocket::async_trait]
 impl<'r> Responder<'r, 'static> for Error {
@@ -53,8 +29,9 @@ struct TokenResponse {
     refresh_token: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
-struct User {
-    username: String,
+pub struct User {
+    pub username: String,
+    pub id: i32,
 }
 pub struct OAuthToken(pub String);
 
@@ -72,7 +49,7 @@ impl<'r> FromRequest<'r> for OAuthToken {
     }
 }
 
-async fn token_request(auth_code: &str) -> Result<TokenResponse> {
+pub async fn token_request(auth_code: &str) -> Result<TokenResponse> {
     let client_id = env::var("CLIENT_ID").expect("error");
     let client_secret = env::var("CLIENT_SECRET").expect("error");
     let redirect_uri = env::var("CALLBACK_URI").expect("error");
@@ -100,7 +77,7 @@ async fn token_request(auth_code: &str) -> Result<TokenResponse> {
     Ok(res)
 }
 
-async fn get_me(token: &str) -> Result<User> {
+pub async fn get_me(token: &str) -> Result<User> {
     let res = Client::new()
         .get(format!("{}{}", API_BASE, "/me/osu"))
         .header(AUTHORIZATION, format!("Bearer {}", token))

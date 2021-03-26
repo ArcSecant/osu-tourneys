@@ -12,7 +12,9 @@ use rocket_contrib::json::Json;
 use serde::{Deserialize, Serialize};
 use std::{cmp, env, ffi::CString, str};
 
-use crate::auth::*;
+use crate::auth::OAuthToken;
+use crate::error::Result;
+use crate::API_BASE;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UserState {
@@ -39,7 +41,7 @@ pub struct OsuMapInfo {
     #[serde(rename(serialize = "hp"))]
     drain: f32,
     url: String,
-    id: u32,
+    id: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,8 +55,8 @@ struct OsuMapSetInfo {
 
 #[get("/map_info/<map_id>?<mods>")]
 pub async fn map_info(
-    map_id: u32,
-    mods: Option<u32>,
+    map_id: i32,
+    mods: Option<i32>,
     token: OAuthToken,
 ) -> Result<Json<OsuMapInfo>> {
     let mut res = Client::new()
