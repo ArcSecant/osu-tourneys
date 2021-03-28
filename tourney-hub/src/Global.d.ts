@@ -3,6 +3,7 @@ declare global {
     key: number
     mod?: string
     modNum: number
+    cover?: string
     mapName: string
     sr: number
     bpm: number
@@ -11,6 +12,7 @@ declare global {
     ar: number
     od: number
     id: number
+    setId?: number
   }
 
   export interface Mappool {

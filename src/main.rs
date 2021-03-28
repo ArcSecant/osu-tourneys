@@ -66,7 +66,8 @@ async fn main() -> Result<(), Error> {
                 auth::auth_callback,
                 osuapi::map_info,
                 db::save_user,
-                db::save_pool
+                db::save_pool,
+                db::get_pool
             ],
         )
         .launch()

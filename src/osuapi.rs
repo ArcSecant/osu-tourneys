@@ -51,6 +51,8 @@ struct OsuMapSetInfo {
     #[serde(rename(serialize = "mapName"))]
     title: String,
     artist: String,
+    #[serde(rename(serialize = "setId"))]
+    id: i32
 }
 
 #[get("/map_info/<map_id>?<mods>")]
