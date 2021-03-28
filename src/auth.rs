@@ -33,6 +33,7 @@ pub struct User {
     pub username: String,
     pub id: i32,
 }
+#[derive(Clone, Debug)]
 pub struct OAuthToken(pub String);
 
 #[rocket::async_trait]

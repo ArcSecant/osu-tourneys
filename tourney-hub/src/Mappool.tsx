@@ -4,25 +4,35 @@ import { FormInstance } from "antd/lib/form"
 import "antd/dist/antd.css"
 
 const { Option } = Select
+const axios = require("axios").default
 
 const modpool = ["NM", "HD", "HR", "DT", "FM", "EZ", "HT", "FL", "TB"]
 
-interface IProps {
-  maps: Array<MapInfo>
-}
+const stages = [
+  "Groups",
+  "Qualifers",
+  "RO64",
+  "RO32",
+  "RO16",
+  "QF",
+  "SF",
+  "F",
+  "GF",
+]
 
 function round(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
-export const Mappool: React.FC<IProps> = () => {
-  const [maps, setMaps] = useState<Array<MapInfo>>([])
+export const Mappool: React.FC = () => {
+  const [maps, setMaps] = useState<Mappool>({})
 
-  let formRef = React.createRef<FormInstance>()
+  let formRefMap = React.createRef<FormInstance>()
+  let formRefPool = React.createRef<FormInstance>()
 
   let columns = [
     { title: "Mod", dataIndex: "mod", key: "mod" },
-    { title: "Map", dataIndex: "map", key: "map" },
+    { title: "Map", dataIndex: "mapName", key: "mapName" },
     { title: "SR", dataIndex: "sr", key: "sr" },
     { title: "BPM", dataIndex: "bpm", key: "bpm" },
     { title: "Length", dataIndex: "length", key: "length" },
@@ -60,20 +70,17 @@ export const Mappool: React.FC<IProps> = () => {
     e: React.MouseEvent<HTMLSpanElement, MouseEvent>
   ) => {
     e.preventDefault()
-    const newMaps: Array<MapInfo> = maps.filter(
-      (item: any) => item.key !== key
-    )
-    setMaps(newMaps)
+    let newMappool: Mappool = {}
+    Object.keys(maps).forEach((map) => {
+      newMappool[map] = maps[map].filter((item: any) => item.key !== key)
+    })
+    setMaps(newMappool)
   }
 
   let onAdd = () => {
-    let mapId: string = formRef.current!.getFieldValue("map")
-    let mod: string = formRef.current!.getFieldValue("mod")
-    let modNum: string = formRef.current!.getFieldValue("num")
-    fetchMapInfo(mapId, mod, modNum)
-  }
-
-  let fetchMapInfo = (mapId: string, mod: string, modNum: string) => {
+    let mapId: string = formRefMap.current!.getFieldValue("mapId")
+    let mod: string = formRefMap.current!.getFieldValue("mod")
+    let modNum: string = formRefMap.current!.getFieldValue("num")
     let modFlag = 0
     switch (mod) {
       case "EZ": {
@@ -101,8 +108,8 @@ export const Mappool: React.FC<IProps> = () => {
       .then((response) => {
         let map = {
           key: Date.now(),
-          mod: `${mod ?? "NM"}${modNum ?? 1}`,
-          map: `${response.beatmapset.artist} - ${response.beatmapset.mapName}[${response.diffName}]`,
+          modNum: parseInt(modNum),
+          mapName: `${response.beatmapset.artist} - ${response.beatmapset.mapName}[${response.diffName}]`,
           sr: round(response.starRating),
           bpm: round(response.bpm),
           length: new Date(1000 * response.drainTime)
@@ -113,14 +120,48 @@ export const Mappool: React.FC<IProps> = () => {
           od: round(response.od),
           id: response.id,
         }
-        setMaps([...maps, map])
+        let newMaps = [...(maps?.[mod] ?? []), map].sort(
+          (a, b) => a.modNum - b.modNum
+        )
+        setMaps({ ...maps, ...{ [mod]: newMaps } })
       })
+  }
+
+  let savePool = () => {
+    let poolName: string = formRefPool.current!.getFieldValue("poolName")
+    let poolStage: string = formRefPool.current!.getFieldValue("poolStage")
+    axios
+      .post("/api/save_pool", {
+        poolName: poolName,
+        poolStage: poolStage,
+        maps: maps,
+        timestamp: new Date().toISOString(),
+      })
+      .then((response: any) => {
+        console.log(response)
+      })
+      .catch((err: any) => {
+        console.log(err)
+      })
+  }
+
+  let convertToDataSource = (mappool: Mappool) => {
+    return Object.entries(mappool)
+      .sort((a, b) => modpool.indexOf(a[0]) - modpool.indexOf(b[0]))
+      .map((maps) => {
+        let newMaps = maps[1]
+        newMaps.forEach((m) => {
+          m.mod = `${maps[0]}${m.modNum}`
+        })
+        return newMaps
+      })
+      .flat()
   }
 
   return (
     <div>
-      <Form layout={"inline"} ref={formRef}>
-        <Form.Item name="map" label="Map ID">
+      <Form layout={"inline"} ref={formRefMap}>
+        <Form.Item name="mapId" label="Map ID">
           <Input placeholder="Beatmap link or ID" allowClear />
         </Form.Item>
         <Form.Item name="mod" label="Mod" style={{ width: "150px" }}>
@@ -159,7 +200,29 @@ export const Mappool: React.FC<IProps> = () => {
         </Form.Item>
       </Form>
       <br />
-      <Table columns={columns} dataSource={maps} pagination={false} />
+      <Form layout={"inline"} ref={formRefPool}>
+        <Form.Item name="poolName" style={{ width: "150px" }}>
+          <Input placeholder="Name" allowClear />
+        </Form.Item>
+        <Form.Item name="poolStage" label="Stage" style={{ width: "150px" }}>
+          <Select placeholder="Stage" allowClear>
+            {stages.map((stage) => {
+              return <Option value={stage}>{stage}</Option>
+            })}
+          </Select>
+        </Form.Item>
+        <Form.Item>
+          <Button type="link" onClick={savePool}>
+            Save
+          </Button>
+        </Form.Item>
+      </Form>
+      <br />
+      <Table
+        columns={columns}
+        dataSource={convertToDataSource(maps)}
+        pagination={false}
+      />
     </div>
   )
 }
