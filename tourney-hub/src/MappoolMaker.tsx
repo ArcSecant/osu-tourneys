@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { Table, Form, Input, Button, Select, Image } from "antd"
 import { FormInstance } from "antd/lib/form"
-import "antd/dist/antd.css"
+import "antd/dist/antd.dark.css"
 
 import { modpool, convertToDataSource, useWindowSize } from "./common"
 
@@ -165,7 +165,7 @@ export const MappoolMaker: React.FC = () => {
           style={{ width: "150px" }}
           initialValue={"NM"}
         >
-          <Select placeholder="Mod" allowClear>
+          <Select placeholder="Mod">
             {modpool.map((mod) => {
               return <Option value={mod}>{mod}</Option>
             })}
@@ -193,11 +193,6 @@ export const MappoolMaker: React.FC = () => {
             Add
           </Button>
         </Form.Item>
-        <Form.Item>
-          <Button type="link" href="/api/login">
-            Login
-          </Button>
-        </Form.Item>
       </Form>
       <br />
       <Form layout={"inline"} ref={formRefPool}>
@@ -210,7 +205,7 @@ export const MappoolMaker: React.FC = () => {
           style={{ width: "150px" }}
           initialValue={"Qualifiers"}
         >
-          <Select placeholder="Stage" allowClear>
+          <Select placeholder="Stage">
             {stages.map((stage) => {
               return <Option value={stage}>{stage}</Option>
             })}

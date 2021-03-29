@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
 import { Table, Image, Form, Input, Button, Select } from "antd"
+import "./styles.css"
 
 import { convertToDataSource, useWindowSize } from "./common"
 
@@ -19,8 +20,14 @@ const ViewMappool: React.FC = () => {
       title: "Cover",
       dataIndex: "cover",
       key: "cover",
-      width: "10%",
-      render: (url: string) => <Image fallback={"https://via.placeholder.com/900x250?text=:("} src={url} width="100%"></Image>,
+      width: "5%",
+      render: (url: string) => (
+        <Image
+          fallback={"https://via.placeholder.com/900x250?text=:("}
+          src={url}
+          width="100%"
+        ></Image>
+      ),
     },
     { title: "Map", dataIndex: "mapName", key: "mapName", width: "30%" },
     { title: "SR", dataIndex: "sr", key: "sr", width: "5%" },
@@ -58,6 +65,7 @@ const ViewMappool: React.FC = () => {
         dataSource={convertToDataSource(mappool)}
         pagination={false}
         scroll={{ y: windowSize.height - 240 }}
+        rowClassName={(record, key) => record.mod?.slice(0, 2) ?? ""}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from "react"
-import { Table, Form, Input, Button, Select } from "antd"
+import { Table, Form, Input, Button, Image, Select } from "antd"
 import { Layout, Menu, Breadcrumb } from "antd"
 import { Divider } from "antd"
 import { FormInstance } from "antd/lib/form"
@@ -14,10 +14,6 @@ function App() {
   let formRef = React.createRef<FormInstance>()
   let [poolLink, setPoolLink] = useState<string>("")
 
-  let getLink = () => {
-    return formRef.current!.getFieldValue("poolName")
-  }
-
   return (
     <Router>
       <Layout style={{ height: "100vh" }}>
@@ -25,16 +21,32 @@ function App() {
           <div
             style={{
               float: "left",
-              width: "120px",
+              width: "50px",
               height: "31px",
               margin: "16px 24px 16px 0",
-              background: "rgba(255, 255, 255, 0.3)",
+              // background: "rgba(255, 255, 255, 0.3)",
             }}
-          />
+          >
+            <Image
+              src="https://cdn.discordapp.com/emojis/810744842970726401.png"
+              width="80%"
+              preview={false}
+            ></Image>
+          </div>
           <Menu theme="dark" mode="horizontal">
-            <Menu.Item key="1">
+            <Menu.Item key="2">
+              <Button type="link" href="/" style={{ marginLeft: "auto" }}>
+                Home
+              </Button>
+            </Menu.Item>
+            <Menu.Item key="3">
               <Button type="link" href="/create" style={{ marginLeft: "auto" }}>
                 Create Mappool
+              </Button>
+            </Menu.Item>
+            <Menu.Item key="1" style={{ float: "right" }}>
+              <Button type="link" href="/api/login">
+                Login
               </Button>
             </Menu.Item>
           </Menu>
